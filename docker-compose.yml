@@ -1,0 +1,38 @@
+services:
+  postgres:
+    image: postgres:13
+    environment:
+      - POSTGRES_USER=airflow
+      - POSTGRES_PASSWORD=airflow
+      - POSTGRES_DB=airflow
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  airflow-webserver:
+    image: apache/airflow:2.7.0
+    environment:
+      - AIRFLOW__CORE__EXECUTOR=LocalExecutor
+      - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@postgres/airflow
+      - AIRFLOW__CORE__DAGS_FOLDER=/opt/airflow/dags
+    volumes:
+      - ./lab1_titanic/dags:/opt/airflow/dags
+      - ./lab1_titanic/scripts:/opt/airflow/scripts
+    ports:
+      - "8080:8080"
+    depends_on:
+      - postgres
+
+  mlflow:
+    image: python:3.9-slim
+    command: >
+      bash -c "pip install mlflow==2.8.1 &&
+               mlflow server --backend-store-uri sqlite:///mlflow.db --default-artifact-root ./artifacts --host 0.0.0.0"
+    ports:
+      - "5000:5000"
+    volumes:
+      - mlflow_data:/mlflow
+    working_dir: /mlflow
+
+volumes:
+  postgres_data:
+  mlflow_data:
