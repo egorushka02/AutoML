@@ -10,10 +10,15 @@ services:
 
   airflow-webserver:
     image: apache/airflow:2.7.0
+    command: >
+      bash -c "airflow db init &&
+               airflow users create --username admin --firstname Admin --lastname User --role Admin --email admin@example.com --password admin &&
+               airflow webserver"
     environment:
       - AIRFLOW__CORE__EXECUTOR=LocalExecutor
       - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@postgres/airflow
       - AIRFLOW__CORE__DAGS_FOLDER=/opt/airflow/dags
+      - AIRFLOW__WEBSERVER__EXPOSE_CONFIG=true
     volumes:
       - ./lab1_titanic/dags:/opt/airflow/dags
       - ./lab1_titanic/scripts:/opt/airflow/scripts
@@ -21,6 +26,22 @@ services:
       - "8080:8080"
     depends_on:
       - postgres
+    restart: unless-stopped
+
+  airflow-scheduler:
+    image: apache/airflow:2.7.0
+    command: airflow scheduler
+    environment:
+      - AIRFLOW__CORE__EXECUTOR=LocalExecutor
+      - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@postgres/airflow
+      - AIRFLOW__CORE__DAGS_FOLDER=/opt/airflow/dags
+    volumes:
+      - ./lab1_titanic/dags:/opt/airflow/dags
+      - ./lab1_titanic/scripts:/opt/airflow/scripts
+    depends_on:
+      - postgres
+      - airflow-webserver
+    restart: unless-stopped
 
   mlflow:
     image: python:3.9-slim
@@ -28,7 +49,7 @@ services:
       bash -c "pip install mlflow==2.8.1 &&
                mlflow server --backend-store-uri sqlite:///mlflow.db --default-artifact-root ./artifacts --host 0.0.0.0"
     ports:
-      - "5000:5000"
+      - "5001:5000"
     volumes:
       - mlflow_data:/mlflow
     working_dir: /mlflow
