@@ -180,3 +180,6 @@ Thumbs.db
 *.temp
 temp/
 tmp/
+
+
+.kaggle/
